@@ -138,14 +138,15 @@ if test "x$enable_sdl" = xyes; then
   VBA_SRC_EXTRA="$VBA_SRC_EXTRA sdl"
 fi
 
-if test "x$enable_gtk" = xyes; then
-  dnl Internationalisation support.
-  ALL_LINGUAS="fr sv pt_BR"
-  AM_GNU_GETTEXT(external)
-  AC_CHECK_HEADERS(libintl.h)
-  GETTEXT_PACKAGE=vba
-  AC_SUBST(GETTEXT_PACKAGE)
+dnl Internationalisation support.
+ALL_LINGUAS="fr sv pt_BR"
+AM_GNU_GETTEXT(external)
+AC_CHECK_HEADERS(libintl.h)
+GETTEXT_PACKAGE=vba
+AC_SUBST(GETTEXT_PACKAGE)
+VBA_EXTRA="$VBA_EXTRA po"
 
+if test "x$enable_gtk" = xyes; then
   PKG_CHECK_MODULES(GTKMM, gtkmm-$gtk_version >= 2.0.0 libglademm-$gtk_version >= 2.1.0)
   AC_SUBST(GTKMM_CFLAGS)
   AC_SUBST(GTKMM_LIBS)
@@ -153,7 +154,6 @@ if test "x$enable_gtk" = xyes; then
     GTKMM_CPPFLAGS="-DGTKMM20"
   fi
   AC_SUBST(GTKMM_CPPFLAGS)
-  VBA_EXTRA="$VBA_EXTRA po"
   VBA_SRC_EXTRA="$VBA_SRC_EXTRA gtk"
 fi
 
