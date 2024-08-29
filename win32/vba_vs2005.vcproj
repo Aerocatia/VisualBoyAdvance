@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="8,00"
+	Version="8.00"
 	Name="vba_vs2005"
 	ProjectGUID="{EAD25A86-E6DB-4258-8875-197930F28F6A}"
 	RootNamespace="vba_vs2005"
@@ -35,6 +35,7 @@
 			/>
 			<Tool
 				Name="YASM"
+				CommandLine="yasm -Xvc -f win32 [AllOptions] [AdditionalOptions] [Inputs]"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -127,6 +128,7 @@
 			/>
 			<Tool
 				Name="YASM"
+				CommandLine="yasm -Xvc -f win32 [AllOptions] [AdditionalOptions] [Inputs]"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -226,6 +228,7 @@
 			/>
 			<Tool
 				Name="YASM"
+				CommandLine="yasm -Xvc -f win32 [AllOptions] [AdditionalOptions] [Inputs]"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -319,6 +322,7 @@
 			/>
 			<Tool
 				Name="YASM"
+				CommandLine="yasm -Xvc -f win32 [AllOptions] [AdditionalOptions] [Inputs]"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
