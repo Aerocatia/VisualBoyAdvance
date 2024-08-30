@@ -14,12 +14,10 @@
 
 #line 1 "expr.y"
 
-namespace std {  
-#include <stdio.h>
+#include <cstdio>
 #include <memory.h>
 #include <stdlib.h>
 #include <string.h>
-}
 
 using namespace std;
  
