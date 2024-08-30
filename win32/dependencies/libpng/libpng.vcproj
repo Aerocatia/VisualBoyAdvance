@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="8,00"
+	Version="8.00"
 	Name="libpng"
 	ProjectGUID="{96E945F7-0377-48DA-A5F8-1C192DE9F25F}"
 	RootNamespace="libpng"
@@ -111,7 +111,6 @@
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE"
 				RuntimeLibrary="0"
 				EnableEnhancedInstructionSet="1"
-				DisableLanguageExtensions="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="1"
 				Detect64BitPortabilityProblems="false"
@@ -163,6 +162,26 @@
 			</File>
 			<File
 				RelativePath=".\pngconf.h"
+				>
+			</File>
+			<File
+				RelativePath=".\pngdebug.h"
+				>
+			</File>
+			<File
+				RelativePath=".\pnginfo.h"
+				>
+			</File>
+			<File
+				RelativePath=".\pnglibconf.h"
+				>
+			</File>
+			<File
+				RelativePath=".\pngpriv.h"
+				>
+			</File>
+			<File
+				RelativePath=".\pngstruct.h"
 				>
 			</File>
 		</Filter>
