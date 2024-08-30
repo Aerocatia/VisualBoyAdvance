@@ -1,6 +1,6 @@
 /*
     SDL - Simple DirectMedia Layer
-    Copyright (C) 1997-2006 Sam Lantinga
+    Copyright (C) 1997-2012 Sam Lantinga
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -27,7 +27,9 @@
 
 /* This is a set of defines to configure the SDL features */
 
-#ifdef _MSC_VER
+#if defined(__GNUC__) || defined(__DMC__) || defined(__WATCOMC__)
+#define HAVE_STDINT_H	1
+#elif defined(_MSC_VER)
 typedef signed __int8		int8_t;
 typedef unsigned __int8		uint8_t;
 typedef signed __int16		int16_t;
@@ -44,7 +46,14 @@ typedef unsigned int   uintptr_t;
 #endif
 #define _UINTPTR_T_DEFINED
 #endif
-#else
+/* Older Visual C++ headers don't have the Win64-compatible typedefs... */
+#if ((_MSC_VER <= 1200) && (!defined(DWORD_PTR)))
+#define DWORD_PTR DWORD
+#endif
+#if ((_MSC_VER <= 1200) && (!defined(LONG_PTR)))
+#define LONG_PTR LONG
+#endif
+#else	/* !__GNUC__ && !_MSC_VER */
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
 typedef signed short int16_t;
@@ -58,7 +67,7 @@ typedef unsigned long long uint64_t;
 typedef unsigned int size_t;
 #endif
 typedef unsigned int uintptr_t;
-#endif /* _MSC_VER */
+#endif /* __GNUC__ || _MSC_VER */
 #define SDL_HAS_64BIT_TYPE	1
 
 /* Enabled for SDL 1.2 (binary compatibility) */
@@ -87,6 +96,7 @@ typedef unsigned int uintptr_t;
 #define HAVE_MEMMOVE 1
 #define HAVE_MEMCMP 1
 #define HAVE_STRLEN 1
+#define HAVE_STRDUP 1
 #define HAVE__STRREV 1
 #define HAVE__STRUPR 1
 #define HAVE__STRLWR 1
@@ -96,9 +106,18 @@ typedef unsigned int uintptr_t;
 #define HAVE_ITOA 1
 #define HAVE__LTOA 1
 #define HAVE__ULTOA 1
+#define HAVE__I64TOA 1
+#define HAVE__UI64TOA 1
 #define HAVE_STRTOL 1
 #define HAVE_STRTOUL 1
+#if defined(__MINGW32__) || defined(__WATCOMC__)
 #define HAVE_STRTOLL 1
+#define HAVE_STRTOULL 1
+#endif
+#if defined(__WATCOMC__) || (defined(_MSC_VER) && (_MSC_VER >= 1300)) || defined(_WIN64)
+#define HAVE__STRTOI64 1
+#define HAVE__STRTOUI64 1
+#endif
 #define HAVE_STRTOD 1
 #define HAVE_ATOI 1
 #define HAVE_ATOF 1
@@ -162,6 +181,9 @@ typedef unsigned int uintptr_t;
 #define SDL_VIDEO_OPENGL	1
 #define SDL_VIDEO_OPENGL_WGL	1
 #endif
+
+/* Disable screensaver */
+#define SDL_VIDEO_DISABLE_SCREENSAVER	1
 
 /* Enable assembly routines (Win64 doesn't have inline asm) */
 #ifndef _WIN64

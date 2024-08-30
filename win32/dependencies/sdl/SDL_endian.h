@@ -1,6 +1,6 @@
 /*
     SDL - Simple DirectMedia Layer
-    Copyright (C) 1997-2006 Sam Lantinga
+    Copyright (C) 1997-2012 Sam Lantinga
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -20,27 +20,63 @@
     slouken@libsdl.org
 */
 
-/* Functions for reading and writing endian-specific values */
+/**
+ *  @file SDL_endian.h
+ *  Functions for reading and writing endian-specific values
+ */
 
 #ifndef _SDL_endian_h
 #define _SDL_endian_h
 
 #include "SDL_stdinc.h"
 
-/* The two types of endianness */
+/** @name SDL_ENDIANs
+ *  The two types of endianness
+ */
+/*@{*/
 #define SDL_LIL_ENDIAN	1234
 #define SDL_BIG_ENDIAN	4321
+/*@}*/
 
 #ifndef SDL_BYTEORDER	/* Not defined in SDL_config.h? */
+#ifdef __linux__
+#include <endian.h>
+#define SDL_BYTEORDER  __BYTE_ORDER
+#elif defined(__sun) && defined(__SVR4)  /* Solaris */
+#include <sys/byteorder.h>
+#if defined(_LITTLE_ENDIAN)
+#define SDL_BYTEORDER   SDL_LIL_ENDIAN
+#elif defined(_BIG_ENDIAN)
+#define SDL_BYTEORDER   SDL_BIG_ENDIAN
+#else
+#error Unsupported endianness
+#endif
+#elif defined(__OpenBSD__) || defined(__DragonFly__)
+#include <endian.h>
+#define SDL_BYTEORDER  BYTE_ORDER
+#elif defined(__FreeBSD__) || defined(__NetBSD__)
+#include <sys/endian.h>
+#define SDL_BYTEORDER  BYTE_ORDER
+/* predefs from newer gcc and clang versions: */
+#elif defined(__ORDER_LITTLE_ENDIAN__) && defined(__ORDER_BIG_ENDIAN__) && defined(__BYTE_ORDER__)
+#if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define SDL_BYTEORDER   SDL_LIL_ENDIAN
+#elif (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define SDL_BYTEORDER   SDL_BIG_ENDIAN
+#else
+#error Unsupported endianness
+#endif /**/
+#else
 #if defined(__hppa__) || \
     defined(__m68k__) || defined(mc68000) || defined(_M_M68K) || \
-    (defined(__MIPS__) && defined(__MISPEB__)) || \
-    defined(__ppc__) || defined(__POWERPC__) || defined(_M_PPC) || \
-    defined(__sparc__)
+    (defined(__MIPS__) && defined(__MIPSEB__)) || \
+    defined(__ppc__) || defined(__POWERPC__) || defined(__powerpc__) || defined(__PPC__) || \
+    defined(__sparc__) || defined(__sparc)
 #define SDL_BYTEORDER	SDL_BIG_ENDIAN
 #else
 #define SDL_BYTEORDER	SDL_LIL_ENDIAN
 #endif
+#endif /* __linux__ */
 #endif /* !SDL_BYTEORDER */
 
 
@@ -50,13 +86,16 @@
 extern "C" {
 #endif
 
-/* Use inline functions for compilers that support them, and static
-   functions for those that do not.  Because these functions become
-   static for compilers that do not support inline functions, this
-   header should only be included in files that actually use them.
-*/
+/**
+ *  @name SDL_Swap Functions
+ *  Use inline functions for compilers that support them, and static
+ *  functions for those that do not.  Because these functions become
+ *  static for compilers that do not support inline functions, this
+ *  header should only be included in files that actually use them.
+ */
+/*@{*/
 #if defined(__GNUC__) && defined(__i386__) && \
-   !(__GNUC__ == 2 && __GNUC_MINOR__ == 95 /* broken gcc version */)
+   !(__GNUC__ == 2 && __GNUC_MINOR__ <= 95 /* broken gcc version */)
 static __inline__ Uint16 SDL_Swap16(Uint16 x)
 {
 	__asm__("xchgb %b0,%h0" : "=q" (x) :  "0" (x));
@@ -71,24 +110,36 @@ static __inline__ Uint16 SDL_Swap16(Uint16 x)
 #elif defined(__GNUC__) && (defined(__powerpc__) || defined(__ppc__))
 static __inline__ Uint16 SDL_Swap16(Uint16 x)
 {
-	Uint16 result;
+	int result;
 
 	__asm__("rlwimi %0,%2,8,16,23" : "=&r" (result) : "0" (x >> 8), "r" (x));
-	return result;
+	return (Uint16)result;
 }
-#elif defined(__GNUC__) && (defined(__M68000__) || defined(__M68020__))
+#elif defined(__GNUC__) && defined(__aarch64__)
+static __inline__ Uint16 SDL_Swap16(Uint16 x)
+{
+	return __builtin_bswap16(x);
+}
+#elif defined(__GNUC__) && (defined(__m68k__) && !defined(__mcoldfire__))
 static __inline__ Uint16 SDL_Swap16(Uint16 x)
 {
 	__asm__("rorw #8,%0" : "=d" (x) :  "0" (x) : "cc");
 	return x;
 }
+#elif defined(__WATCOMC__) && defined(__386__)
+extern __inline Uint16 SDL_Swap16(Uint16);
+#pragma aux SDL_Swap16 = \
+	"xchg al, ah" \
+	parm   [ax]   \
+	modify [ax];
 #else
 static __inline__ Uint16 SDL_Swap16(Uint16 x) {
-	return((x<<8)|(x>>8));
+	return SDL_static_cast(Uint16, ((x<<8)|(x>>8)));
 }
 #endif
 
-#if defined(__GNUC__) && defined(__i386__)
+#if defined(__GNUC__) && defined(__i386__) && \
+   !(__GNUC__ == 2 && __GNUC_MINOR__ <= 95 /* broken gcc version */)
 static __inline__ Uint32 SDL_Swap32(Uint32 x)
 {
 	__asm__("bswap %0" : "=r" (x) : "0" (x));
@@ -105,36 +156,53 @@ static __inline__ Uint32 SDL_Swap32(Uint32 x)
 {
 	Uint32 result;
 
-	__asm__("rlwimi %0,%2,24,16,23" : "=&r" (result) : "0" (x>>24), "r" (x));
-	__asm__("rlwimi %0,%2,8,8,15"   : "=&r" (result) : "0" (result),    "r" (x));
-	__asm__("rlwimi %0,%2,24,0,7"   : "=&r" (result) : "0" (result),    "r" (x));
+	__asm__("rlwimi %0,%2,24,16,23" : "=&r" (result) : "0" (x>>24),  "r" (x));
+	__asm__("rlwimi %0,%2,8,8,15"   : "=&r" (result) : "0" (result), "r" (x));
+	__asm__("rlwimi %0,%2,24,0,7"   : "=&r" (result) : "0" (result), "r" (x));
 	return result;
 }
-#elif defined(__GNUC__) && (defined(__M68000__) || defined(__M68020__))
+#elif defined(__GNUC__) && defined(__aarch64__)
+static __inline__ Uint32 SDL_Swap32(Uint32 x)
+{
+	return __builtin_bswap32(x);
+}
+#elif defined(__GNUC__) && (defined(__m68k__) && !defined(__mcoldfire__))
 static __inline__ Uint32 SDL_Swap32(Uint32 x)
 {
 	__asm__("rorw #8,%0\n\tswap %0\n\trorw #8,%0" : "=d" (x) :  "0" (x) : "cc");
 	return x;
 }
+#elif defined(__WATCOMC__) && defined(__386__)
+extern __inline Uint32 SDL_Swap32(Uint32);
+#pragma aux SDL_Swap32 = \
+	"bswap eax"  \
+	parm   [eax] \
+	modify [eax];
 #else
 static __inline__ Uint32 SDL_Swap32(Uint32 x) {
-	return((x<<24)|((x<<8)&0x00FF0000)|((x>>8)&0x0000FF00)|(x>>24));
+	return SDL_static_cast(Uint32, ((x<<24)|((x<<8)&0x00FF0000)|((x>>8)&0x0000FF00)|(x>>24)));
 }
 #endif
 
-#ifdef SDL_HAS_64BIT_TYPE
-#if defined(__GNUC__) && defined(__i386__)
+#ifdef SDL_HAS_64BIT_TYPE /**/
+#if defined(__GNUC__) && defined(__i386__) && \
+   !(__GNUC__ == 2 && __GNUC_MINOR__ <= 95 /* broken gcc version */)
 static __inline__ Uint64 SDL_Swap64(Uint64 x)
 {
-	union { 
+	union {
 		struct { Uint32 a,b; } s;
 		Uint64 u;
 	} v;
 	v.u = x;
-	__asm__("bswapl %0 ; bswapl %1 ; xchgl %0,%1" 
-	        : "=r" (v.s.a), "=r" (v.s.b) 
-	        : "0" (v.s.a), "1" (v.s.b)); 
+	__asm__("bswapl %0 ; bswapl %1 ; xchgl %0,%1"
+	        : "=r" (v.s.a), "=r" (v.s.b)
+	        : "0"  (v.s.a),  "1" (v.s.b));
 	return v.u;
+}
+#elif defined(__GNUC__) && defined(__aarch64__)
+static __inline__ Uint64 SDL_Swap64(Uint64 x)
+{
+	return __builtin_bswap64(x);
 }
 #elif defined(__GNUC__) && defined(__x86_64__)
 static __inline__ Uint64 SDL_Swap64(Uint64 x)
@@ -142,31 +210,43 @@ static __inline__ Uint64 SDL_Swap64(Uint64 x)
 	__asm__("bswapq %0" : "=r" (x) : "0" (x));
 	return x;
 }
+#elif defined(__WATCOMC__) && defined(__386__)
+extern __inline Uint64 SDL_Swap64(Uint64);
+#pragma aux SDL_Swap64 = \
+	"bswap eax"     \
+	"bswap edx"     \
+	"xchg eax,edx"  \
+	parm [eax edx]  \
+	modify [eax edx];
 #else
 static __inline__ Uint64 SDL_Swap64(Uint64 x)
 {
 	Uint32 hi, lo;
 
 	/* Separate into high and low 32-bit values and swap them */
-	lo = (Uint32)(x&0xFFFFFFFF);
+	lo = SDL_static_cast(Uint32, x & 0xFFFFFFFF);
 	x >>= 32;
-	hi = (Uint32)(x&0xFFFFFFFF);
+	hi = SDL_static_cast(Uint32, x & 0xFFFFFFFF);
 	x = SDL_Swap32(lo);
 	x <<= 32;
 	x |= SDL_Swap32(hi);
-	return(x);
+	return (x);
 }
 #endif
-#else
+#else  /* SDL_HAS_64BIT_TYPE */
 /* This is mainly to keep compilers from complaining in SDL code.
-   If there is no real 64-bit datatype, then compilers will complain about
-   the fake 64-bit datatype that SDL provides when it compiles user code.
-*/
+ * If there is no real 64-bit datatype, then compilers will complain about
+ * the fake 64-bit datatype that SDL provides when it compiles user code.
+ */
 #define SDL_Swap64(X)	(X)
 #endif /* SDL_HAS_64BIT_TYPE */
+/*@}*/
 
-
-/* Byteswap item from the specified endianness to the native endianness */
+/**
+ *  @name SDL_SwapLE and SDL_SwapBE Functions
+ *  Byteswap item from the specified endianness to the native endianness
+ */
+/*@{*/
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
 #define SDL_SwapLE16(X)	(X)
 #define SDL_SwapLE32(X)	(X)
@@ -182,6 +262,7 @@ static __inline__ Uint64 SDL_Swap64(Uint64 x)
 #define SDL_SwapBE32(X)	(X)
 #define SDL_SwapBE64(X)	(X)
 #endif
+/*@}*/
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
