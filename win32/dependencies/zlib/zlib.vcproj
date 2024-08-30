@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="8,00"
+	Version="8.00"
 	Name="zlib"
 	ProjectGUID="{B938FBD9-C7F9-4BF7-8C27-68865D1FA092}"
 	RootNamespace="zlib"
@@ -105,7 +105,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE;_POSIX_"
 				RuntimeLibrary="0"
 				EnableEnhancedInstructionSet="1"
 				DisableLanguageExtensions="true"
@@ -163,6 +163,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\gzguts.h"
+				>
+			</File>
+			<File
 				RelativePath=".\inffast.h"
 				>
 			</File>
@@ -217,7 +221,19 @@
 				>
 			</File>
 			<File
-				RelativePath=".\gzio.c"
+				RelativePath=".\gzclose.c"
+				>
+			</File>
+			<File
+				RelativePath=".\gzlib.c"
+				>
+			</File>
+			<File
+				RelativePath=".\gzread.c"
+				>
+			</File>
+			<File
+				RelativePath=".\gzwrite.c"
 				>
 			</File>
 			<File
