@@ -58,12 +58,31 @@ int systemFPS;
 
 // Sound stuff
 //
-const  int         iSoundSamples  = 2048;
-const  int         iSoundTotalLen = iSoundSamples * 4;
-static u8          auiSoundBuffer[iSoundTotalLen];
-static int         iSoundLen;
-static SDL_cond *  pstSoundCond;
-static SDL_mutex * pstSoundMutex;
+const  int        sdlSoundSamples  = 2048;
+const  int        sdlSoundAlign    = 4;
+const  int        sdlSoundCapacity = sdlSoundSamples * 4;
+const  int        sdlSoundTotalLen = sdlSoundCapacity + sdlSoundAlign;
+static u8         sdlSoundBuffer[sdlSoundTotalLen];
+static int        sdlSoundRPos;
+static int        sdlSoundWPos;
+static SDL_cond  *sdlSoundCond;
+static SDL_mutex *sdlSoundMutex;
+
+static inline int soundBufferFree()
+{
+  int ret = sdlSoundRPos - sdlSoundWPos - sdlSoundAlign;
+  if (ret < 0)
+    ret += sdlSoundTotalLen;
+  return ret;
+}
+
+static inline int soundBufferUsed()
+{
+  int ret = sdlSoundWPos - sdlSoundRPos;
+  if (ret < 0)
+    ret += sdlSoundTotalLen;
+  return ret;
+}
 
 inline VBA::Window * GUI()
 {
@@ -130,79 +149,69 @@ void systemWriteDataToSoundBuffer()
     SDL_PauseAudio(0);
   }
 
-  bool bWait = true;
-  while (bWait && ! speedup && GUI()->iGetThrottle() == 0)
-  {
-    SDL_mutexP(pstSoundMutex);
-    if (iSoundLen < iSoundTotalLen)
-    {
-      bWait = false;
+  int       remain = soundBufferLen;
+  const u8 *wave   = reinterpret_cast<const u8 *>(soundFinalWave);
+  if (remain <= 0)
+    return;
+  SDL_mutexP(sdlSoundMutex);
+  int n;
+  while (remain >= (n = soundBufferFree())) {
+    const int nAvail = ((sdlSoundTotalLen - sdlSoundWPos) + sdlSoundTotalLen) % sdlSoundTotalLen;
+    if (n >= nAvail) {
+      memcpy(&sdlSoundBuffer[sdlSoundWPos], wave, nAvail);
+      sdlSoundWPos  = 0;
+      wave       += nAvail;
+      remain     -= nAvail;
+      n          -= nAvail;
     }
-    SDL_mutexV(pstSoundMutex);
-  }
-
-  int iLen = soundBufferLen;
-  int iCopied = 0;
-  if (iSoundLen + iLen >= iSoundTotalLen)
-  {
-    iCopied = iSoundTotalLen - iSoundLen;
-    memcpy(&auiSoundBuffer[iSoundLen], soundFinalWave, iCopied);
-
-    iSoundLen = iSoundTotalLen;
-    SDL_CondSignal(pstSoundCond);
-
-    bWait = true;
-    if (! speedup && GUI()->iGetThrottle() == 0)
-    {
-      while(bWait)
-      {
-        SDL_mutexP(pstSoundMutex);
-        if (iSoundLen < iSoundTotalLen)
-        {
-          bWait = false;
-        }
-        SDL_mutexV(pstSoundMutex);
-      }
-
-      memcpy(auiSoundBuffer, ((u8 *)soundFinalWave) + iCopied,
-             soundBufferLen - iCopied);
-
-      iSoundLen = soundBufferLen - iCopied;
+    if (n > 0) {
+      memcpy(&sdlSoundBuffer[sdlSoundWPos], wave, n);
+      sdlSoundWPos = (sdlSoundWPos + n) % sdlSoundTotalLen;
+      wave   += n;
+      remain -= n;
     }
-    else
-    {
-      memcpy(auiSoundBuffer, ((u8 *)soundFinalWave) + iCopied,
-             soundBufferLen);
+    if (!emulating || speedup || GUI()->iGetThrottle() != 0) {
+      SDL_mutexV(sdlSoundMutex);
+      return;
     }
+    SDL_CondWait(sdlSoundCond, sdlSoundMutex);
   }
-  else
-  {
-    memcpy(&auiSoundBuffer[iSoundLen], soundFinalWave, soundBufferLen);
-    iSoundLen += soundBufferLen;
+  const int nAvail = ((sdlSoundTotalLen - sdlSoundWPos) + sdlSoundTotalLen) % sdlSoundTotalLen;
+  if (remain >= nAvail) {
+    memcpy(&sdlSoundBuffer[sdlSoundWPos], wave, nAvail);
+    sdlSoundWPos = 0;
+    wave   += nAvail;
+    remain -= nAvail;
   }
+  if (remain > 0) {
+    memcpy(&sdlSoundBuffer[sdlSoundWPos], wave, remain);
+    sdlSoundWPos = (sdlSoundWPos + remain) % sdlSoundTotalLen;
+  }
+  SDL_mutexV(sdlSoundMutex);
 }
 
-static void vSoundCallback(void * _pvUserData, u8 * _puiStream, int _iLen)
+static void soundCallback(void *, u8 *stream, int len)
 {
-  if (! emulating)
-  {
+  if (len <= 0 || !emulating)
     return;
+  SDL_mutexP(sdlSoundMutex);
+  const int nAvail = soundBufferUsed();
+  if (len > nAvail)
+    len = nAvail;
+  const int nAvail2 = ((sdlSoundTotalLen - sdlSoundRPos) + sdlSoundTotalLen) % sdlSoundTotalLen;
+  if (len >= nAvail2) {
+    memcpy(stream, &sdlSoundBuffer[sdlSoundRPos], nAvail2);
+    sdlSoundRPos = 0;
+    stream += nAvail2;
+    len    -= nAvail2;
   }
-
-  SDL_mutexP(pstSoundMutex);
-  if (! speedup && GUI()->iGetThrottle() == 0)
-  {
-    while (iSoundLen < iSoundTotalLen && emulating)
-    {
-      SDL_CondWait(pstSoundCond, pstSoundMutex);
-    }
+  if (len > 0) {
+    memcpy(stream, &sdlSoundBuffer[sdlSoundRPos], len);
+    sdlSoundRPos = (sdlSoundRPos + len) % sdlSoundTotalLen;
+    stream += len;
   }
-  if (emulating)
-  {
-    memcpy(_puiStream, auiSoundBuffer, _iLen);
-  }
-  iSoundLen = 0;
-  SDL_mutexV(pstSoundMutex);
+  SDL_CondSignal(sdlSoundCond);
+  SDL_mutexV(sdlSoundMutex);
 }
 
 bool systemSoundInit()
@@ -227,8 +236,8 @@ bool systemSoundInit()
 
   stAudio.format   = AUDIO_S16SYS;
   stAudio.channels = 2;
-  stAudio.samples  = iSoundSamples;
-  stAudio.callback = vSoundCallback;
+  stAudio.samples  = sdlSoundSamples;
+  stAudio.callback = soundCallback;
   stAudio.userdata = NULL;
 
   if (SDL_OpenAudio(&stAudio, NULL) < 0)
@@ -237,11 +246,11 @@ bool systemSoundInit()
     return false;
   }
 
-  pstSoundCond  = SDL_CreateCond();
-  pstSoundMutex = SDL_CreateMutex();
+  sdlSoundCond  = SDL_CreateCond();
+  sdlSoundMutex = SDL_CreateMutex();
 
   soundBufferTotalLen = soundBufferLen * 10;
-  iSoundLen = 0;
+  sdlSoundRPos = sdlSoundWPos = 0;
   systemSoundOn = true;
 
   return true;
@@ -249,17 +258,17 @@ bool systemSoundInit()
 
 void systemSoundShutdown()
 {
-  SDL_mutexP(pstSoundMutex);
+  SDL_mutexP(sdlSoundMutex);
   int iSave = emulating;
   emulating = 0;
-  SDL_CondSignal(pstSoundCond);
-  SDL_mutexV(pstSoundMutex);
+  SDL_CondSignal(sdlSoundCond);
+  SDL_mutexV(sdlSoundMutex);
 
-  SDL_DestroyCond(pstSoundCond);
-  pstSoundCond = NULL;
+  SDL_DestroyCond(sdlSoundCond);
+  sdlSoundCond = NULL;
 
-  SDL_DestroyMutex(pstSoundMutex);
-  pstSoundMutex = NULL;
+  SDL_DestroyMutex(sdlSoundMutex);
+  sdlSoundMutex = NULL;
 
   SDL_CloseAudio();
 
