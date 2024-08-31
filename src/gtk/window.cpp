@@ -1428,6 +1428,7 @@ bool Window::bLoadROM(const std::string & _rsFile)
     bLoaded = gbLoadRom(csFile);
     if (bLoaded)
     {
+      gbReset();
       m_eCartridge = CartridgeGB;
       m_stEmulator = GBSystem;
     }
