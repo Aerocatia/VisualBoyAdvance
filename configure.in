@@ -139,7 +139,7 @@ fi
 
 if test "x$enable_gtk" = xyes; then
   dnl Internationalisation support.
-  ALL_LINGUAS="fr"
+  ALL_LINGUAS="fr sv"
   AM_GNU_GETTEXT(external)
   AC_CHECK_HEADERS(libintl.h)
   GETTEXT_PACKAGE=vba-1.8.0
