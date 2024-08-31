@@ -5,6 +5,7 @@ bin_PROGRAMS = gvba
 noinst_LIBRARIES = libgba.a
 
 gvba_SOURCES = \
+	debugger.cpp		\
 	configfile.cpp		\
 	configfile.h		\
 	filters.cpp		\
