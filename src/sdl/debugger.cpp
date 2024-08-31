@@ -2660,5 +2660,5 @@ debugger_last =!debugger_last;
 if (debugger_last == true)
 printf ("Last registers will be shown\n");
 else
-printf ("Last registers wont be shown\n");
+printf ("Last registers won't be shown\n");
 }
