@@ -88,6 +88,18 @@ void profPut16(char *b, u16 v)
   b[1] = (v >> 8) & 255;
 }
 
+void profPut64(char *b, u64 v)
+{
+  b[0] = v & 255;
+  b[1] = (v >> 8) & 255;
+  b[2] = (v >> 16) & 255;
+  b[3] = (v >> 24) & 255;
+  b[4] = (v >> 32) & 255;
+  b[5] = (v >> 40) & 255;
+  b[6] = (v >> 48) & 255;
+  b[7] = (v >> 56) & 255;
+}
+
 int profWrite8(FILE *f, u8 b)
 {
   if(fwrite(&b, 1, 1, f) != 1)
@@ -101,6 +113,16 @@ int profWrite32(FILE *f, u32 v)
 
   profPut32(buf, v);
   if(fwrite(buf, 1, 4, f) != 4)
+    return 1;
+  return 0;
+}
+
+int profWrite64(FILE *f, u64 v)
+{
+  char buf[8];
+
+  profPut64(buf, v);
+  if(fwrite(buf, 1, 8, f) != 8)
     return 1;
   return 0;
 }
@@ -271,7 +293,7 @@ void profCleanup()
       for (toindex=seg->froms[fromindex]; toindex!=0; toindex=seg->tos[toindex].link) {
       if(profWrite8(fd, GMON_TAG_CG_ARC) ||
          profWrite32(fd, (u32)frompc) ||
-	   profWrite32(fd, (u32)seg->tos[toindex].selfpc) ||
+	   profWrite64(fd, (u64)seg->tos[toindex].selfpc) ||
 	   profWrite32(fd, seg->tos[toindex].count)) {
         systemMessage(0, "mcount: arc");
         fclose(fd);
