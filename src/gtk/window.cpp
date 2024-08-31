@@ -1584,6 +1584,7 @@ void Window::vComputeFrameskip(int _iRate)
         if (iDelay > 0)
         {
           m_uiThrottleDelay = iDelay;
+          SDL_Delay(iDelay);
         }
       }
       iWantedSpeed = m_iThrottle;
