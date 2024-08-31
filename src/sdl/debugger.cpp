@@ -1722,9 +1722,9 @@ unsigned int AddressToGBA(u8* mem)
   if(mem >= &bios[0] && mem <= &bios[0x3fff])
     return 0x00000000 + (mem - &bios[0]);
   else if(mem >= &workRAM[0] && mem <= &workRAM[0x3ffff])
-    return 0x02000000 + ((unsigned size_t)mem - (size_t)&workRAM[0]);
+    return 0x02000000 + ((u8 *)mem - (u8 *)&workRAM[0]);
   else if(mem >= &internalRAM[0] && mem <= &internalRAM[0x7fff])
-    return 0x03000000 + ((unsigned size_t)mem - (size_t)&internalRAM[0]);
+    return 0x03000000 + ((u8 *)mem - (u8 *)&internalRAM[0]);
   else if(mem >= &ioMem[0] && mem <= &ioMem[0x3ff])
     return 0x04000000 + (mem - &ioMem[0]);
   else if(mem >= &paletteRAM[0] && mem <= &paletteRAM[0x3ff])
