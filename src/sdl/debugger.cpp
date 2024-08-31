@@ -511,7 +511,7 @@ static void debuggerPrintEnum(Type *t, u32 value)
   for(i = 0; i < t->enumeration->count; i++) {
     EnumMember *m = (EnumMember *)&t->enumeration->members[i];
     if(value == m->value) {
-      printf(m->name);
+      printf("%s", m->name);
       return;
     }
   }
@@ -2542,7 +2542,7 @@ static bool debuggerCondEvaluate(int num)
 /*extern*/ void debuggerOutput(char *s, u32 addr)
 {
   if(s)
-    printf(s);
+    printf("%s", s);
   else {
     char c;
 
